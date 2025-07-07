@@ -21,6 +21,9 @@ dependencies = [
     "ntplib",
 ]
 
+[tool.setuptools.packages.find]
+exclude = ["mcp_simple_timeserver.web*"]
+
 [project.urls]
 "Homepage" = "https://github.com/andybrandt/mcp-simple-timeserver"
 
