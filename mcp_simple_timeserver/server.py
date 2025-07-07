@@ -14,8 +14,8 @@ app = FastMCP("mcp-simple-timeserver")
 @app.tool()
 def get_time() -> str:
     """
-    Returns the current local time and timezone information from the local clock of this server. 
-    As an AI you can thus know what time it is here.
+    Returns the current local time and timezone information from the local clock of this machine. 
+    As an AI you can thus know what time it is here, presumably where the human user is.
     """
     local_time = datetime.now()
     timezone = str(local_time.astimezone().tzinfo)
