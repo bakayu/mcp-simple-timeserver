@@ -1,3 +1,31 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-simple-timeserver"
+version = "1.1.0"
+authors = [
+  { name="Andy Brandt", email="andy@codesprinters.com" },
+]
+description = "A simple MCP server that returns the local time and timezone. Alternatively the server can provide current UTC time from an NTP server."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mcp",
+    "ntplib",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/andybrandt/mcp-simple-timeserver"
+
+[project.scripts]
+mcp-simple-timeserver = "mcp_simple_timeserver:main"
+
+[project.optional-dependencies]
+cli = ["mcp[cli]"]
