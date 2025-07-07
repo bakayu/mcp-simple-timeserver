@@ -12,10 +12,10 @@ app = FastMCP("mcp-simple-timeserver")
 # Note: in this context the docstring are meant for the client AI to understand the tools and their purpose.
 
 @app.tool()
-def get_time() -> str:
+def get_local_time() -> str:
     """
-    Returns the current local time and timezone information from the local clock of this machine. 
-    As an AI you can thus know what time it is here, presumably where the human user is.
+    Returns the current local time and timezone information from your local machine.
+    This helps you understand what time it is for the user you're assisting.
     """
     local_time = datetime.now()
     timezone = str(local_time.astimezone().tzinfo)
@@ -26,7 +26,7 @@ def get_time() -> str:
 def get_utc(server: str = DEFAULT_NTP_SERVER) -> str:
     """
     Returns accurate UTC time from an NTP server.
-    As an AI you can thus know what time it is now exactly in UTC.
+    This provides a universal time reference regardless of local timezone.
     
     :param server: NTP server address (default: pool.ntp.org)
     """
