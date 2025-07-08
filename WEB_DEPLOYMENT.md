@@ -8,7 +8,7 @@ The web server is a stateless service that exposes two tools:
 -   `get_server_time`: Returns the local time of the server machine.
 -   `get_utc`: Returns the current UTC time from an NTP server.
 
-It runs as an ASGI application using Uvicorn.
+It runs using FastMCP's built-in web server (based on Uvicorn/Starlette).
 
 ## Local Development
 
@@ -21,20 +21,16 @@ python3 -m venv venv
 venv/bin/pip install -e .
 ```
 
-Then, install the web-specific dependencies:
-```bash
-venv/bin/pip install -e '.[web]'
-```
-*Note: As of the current version, these dependencies (`uvicorn`, `starlette`) are already included by the core `mcp` package, but this command ensures they are present.*
+The web server dependencies (`uvicorn`, `starlette`) are included by the core `mcp` package.
 
 ### 2. Run the Server
 
-To give more control over deployment, the server script (`mcp_simple_timeserver/web/server.py`) only defines the application but does not run it. You must use an ASGI server like `uvicorn` to run it:
+The server can be run directly using Python:
 
 ```bash
-venv/bin/uvicorn mcp_simple_timeserver.web.server:app --host 127.0.0.1 --port 8000
+venv/bin/python -m mcp_simple_timeserver.web.server
 ```
-This will start the server on `http://127.0.0.1:8000`.
+This will start the server on `http://0.0.0.0:8000`.
 
 ### 3. Test the Server
 
@@ -85,11 +81,7 @@ The server is configured to run on port 8000 inside the container. While you sho
 
 **Local Development:**
 
-To run the server on a different port locally, change the `--port` argument for `uvicorn`:
-```bash
-# Run on port 8080
-venv/bin/uvicorn mcp_simple_timeserver.web.server:app --host 127.0.0.1 --port 8080
-```
+To run the server on a different port locally, you would need to modify the `server.py` file to change the port in the `app.run()` call. The port is currently hardcoded to 8000.
 
 **Docker Deployment:**
 
@@ -107,4 +99,33 @@ Also you can set the restart  policy to "always" - this way the container will r
 ```bash
 
 docker run -d --restart always -p 127.0.0.1:8001:8000 --name timeserver-web mcp-simple-timeserver:web
+```
+
+## Apache Reverse Proxy Configuration
+
+*Important: Trailing Slash Handling*
+
+MCP clients may request URLs with or without trailing slashes. Your Apache configuration must handle both cases to avoid 404 errors.
+
+### Example Configuration
+
+```apache
+<VirtualHost *:443>
+    ServerName mcp.andybrandt.net
+    
+    # SSL Configuration (if using HTTPS)
+    # SSLEngine on
+    # SSLCertificateFile /path/to/cert.pem
+    # SSLCertificateKeyFile /path/to/key.pem
+    
+    # Main proxy configuration 
+    <Location /timeserver>
+        ProxyPass http://127.0.0.1:8001/mcp/
+        ProxyPassReverse http://127.0.0.1:8001/mcp/
+        
+        # Important headers
+        ProxyPreserveHost On
+        RequestHeader set X-Forwarded-Proto "https"
+    </Location>
+</VirtualHost>
 ```
