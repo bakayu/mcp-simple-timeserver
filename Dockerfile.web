@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir .
 EXPOSE 8000
 
 # Run the web server when the container launches
-CMD ["venv/bin/python", "-m", "mcp_simple_timeserver.web.server"] 
+CMD ["python", "-m", "mcp_simple_timeserver.web.server"] 

@@ -2,7 +2,14 @@ from datetime import datetime, UTC
 import ntplib
 from mcp.server.fastmcp import FastMCP
 
-app = FastMCP("mcp-simple-timeserver", stateless_http=True)
+# Create the FastMCP app with web-specific settings
+app = FastMCP(
+    "mcp-simple-timeserver", 
+    stateless_http=True,
+    host="0.0.0.0",  # Listen on all interfaces inside the container
+    port=8000,
+    auth=None  # Explicitly disable authentication
+)
 
 DEFAULT_NTP_SERVER = 'pool.ntp.org'
 
@@ -45,4 +52,6 @@ def get_utc(server: str = DEFAULT_NTP_SERVER) -> str:
         return f"Error getting NTP time: {str(e)}" 
     
 
-app.run(transport="streamable-http")
+if __name__ == "__main__":
+    # Run the server with streamable-http transport
+    app.run(transport="streamable-http")
