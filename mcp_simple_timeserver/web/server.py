@@ -6,7 +6,12 @@ app = FastMCP("mcp-simple-timeserver", stateless_http=True)
 
 DEFAULT_NTP_SERVER = 'pool.ntp.org'
 
-@app.tool()
+@app.tool(
+    annotations = {
+        "title": "Get Local Time and Timezone for the Server Hosting this Tool",
+        "readOnlyHint": True
+    }
+)
 def get_server_time() -> str:
     """
     Returns the current local time and timezone from the server hosting this tool.
@@ -17,7 +22,12 @@ def get_server_time() -> str:
     formatted_time = local_time.strftime("%Y-%m-%d %H:%M:%S")
     return f"Current Server Time: {formatted_time}\nTimezone: {timezone}"
 
-@app.tool()
+@app.tool(
+    annotations = {
+        "title": "Get UTC Time from an NTP Server",
+        "readOnlyHint": True
+    }
+)
 def get_utc(server: str = DEFAULT_NTP_SERVER) -> str:
     """
     Returns accurate UTC time from an NTP server.
