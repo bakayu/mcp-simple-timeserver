@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "fastmcp",
     "ntplib",
+    "pywin32; sys_platform == 'win32'"
 ]
 
 [tool.setuptools.packages.find]
