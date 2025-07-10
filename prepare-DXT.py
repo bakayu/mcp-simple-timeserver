@@ -43,6 +43,17 @@ def create_dxt_package():
         project_author = project_meta["authors"][0]
         project_author['url'] = "https://mcp.andybrandt.net/"
         dependencies = project_meta["dependencies"]
+
+        # --- Extract additional metadata ---
+        homepage_url = project_meta.get("urls", {}).get("Homepage", "")
+        # Parse license from classifiers, default to MIT
+        license_str = "MIT"
+        for classifier in project_meta.get("classifiers", []):
+            if "License :: OSI Approved" in classifier:
+                license_str = classifier.split("::")[-1].strip().replace(" License", "")
+        python_version_req = project_meta.get("requires-python", ">=3.11")
+        # ---
+        
     except (FileNotFoundError, KeyError) as e:
         print(f"Error: Could not read {PYPROJECT_PATH} or it is malformed. {e}")
         return
@@ -79,6 +90,34 @@ def create_dxt_package():
             print("Could not find 'pip'. Is it installed and in your PATH?")
         return
 
+    # Post-install fix for pywin32 on Windows
+    if os.name == 'nt':
+        print("Applying pywin32 post-install fix for vendored library...")
+        pywin32_system32_dir = os.path.join(lib_dir, "pywin32_system32")
+        if os.path.exists(pywin32_system32_dir):
+            import sys
+            # Determine the short Python version string (e.g., "311" for Python 3.11)
+            py_version_short = f"{sys.version_info.major}{sys.version_info.minor}"
+            
+            dlls_to_copy = {
+                f"pywintypes{py_version_short}.dll": "pywintypes.pyd",
+                f"pythoncom{py_version_short}.dll": "pythoncom.pyd"
+            }
+
+            found_any = False
+            for dll_name, pyd_name in dlls_to_copy.items():
+                src_path = os.path.join(pywin32_system32_dir, dll_name)
+                dest_path = os.path.join(lib_dir, pyd_name)
+                if os.path.exists(src_path):
+                    print(f"Copying {src_path} to {dest_path}")
+                    shutil.copy(src_path, dest_path)
+                    found_any = True
+            
+            if not found_any:
+                 print(f"Warning: Failed to apply pywin32 fix. No DLLs found for Python {sys.version}. The package may fail on Windows.")
+        else:
+            print("Warning: pywin32_system32 directory not found. Cannot apply post-install fix.")
+
     # 5. Create manifest.json
     print("Generating manifest.json...")
     manifest_data = {
@@ -87,6 +126,22 @@ def create_dxt_package():
         "version": project_version,
         "author": project_author,
         "description": project_description,
+        "repository": {
+            "type": "git",
+            "url": homepage_url
+        },
+        "homepage": homepage_url,
+        "documentation": homepage_url,
+        "support": f"{homepage_url}/issues" if homepage_url else "",
+        "license": license_str,
+        "keywords": ["time", "ntp", "mcp", "server", "utility"],
+        "compatibility": {
+            "claude_desktop": ">=0.10.0",
+            "platforms": ["darwin", "win32", "linux"],
+            "runtimes": {
+                "python": python_version_req
+            }
+        },
         "server": {
             "type": "python",
             "entry_point": "server/main.py",
