@@ -1,8 +1,6 @@
-import asyncio
-import anyio
 from datetime import datetime, UTC
 import ntplib
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP  # FastMCP 2.0 import
 
 # Default NTP server
 DEFAULT_NTP_SERVER = 'pool.ntp.org'
@@ -48,3 +46,6 @@ def get_utc(server: str = DEFAULT_NTP_SERVER) -> str:
         return f"Current UTC Time from {server}: {formatted_time}"
     except ntplib.NTPException as e:
         return f"Error getting NTP time: {str(e)}"
+
+if __name__ == "__main__":
+    app.run()

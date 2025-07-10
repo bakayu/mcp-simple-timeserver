@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 import ntplib
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP  # FastMCP 2.0 import
 
 # Create the FastMCP app with web-specific settings
 app = FastMCP(
