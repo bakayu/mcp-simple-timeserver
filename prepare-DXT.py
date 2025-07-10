@@ -140,7 +140,7 @@ def create_dxt_package():
     shutil.rmtree(BUILD_DIR)
 
     print("-" * 30)
-    print(f"✅ Successfully created DXT package: {output_filename}")
+    print(f"Successfully created DXT package: {output_filename}")
     print("-" * 30)
 
 
