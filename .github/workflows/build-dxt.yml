@@ -1,0 +1,48 @@
+name: Build DXT Packages
+
+# This workflow can be triggered manually from the Actions tab on GitHub
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Use a build matrix to run the job on all three major operating systems
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # This version should match the 'requires-python' in pyproject.toml
+          python-version: '3.11' 
+          cache: 'pip'
+
+      - name: Install dependencies (for the script itself if needed)
+        run: pip install --upgrade pip
+
+      - name: Run packaging script
+        run: python prepare-DXT.py
+
+      - name: Rename artifact for upload
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-windows.dxt
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-macos.dxt
+          else
+            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-linux.dxt
+          fi
+
+      - name: Upload DXT artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dxt-package-${{ runner.os }}
+          path: ./*.dxt 
