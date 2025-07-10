@@ -97,19 +97,25 @@ def create_dxt_package():
         win32_dir = os.path.join(lib_dir, "win32")
 
         if os.path.exists(pywin32_system32_dir) and os.path.exists(win32_dir):
-            print(f"Copying DLLs from {pywin32_system32_dir} to {win32_dir}...")
+            print(f"Copying DLLs from {pywin32_system32_dir}...")
             for dll_file in os.listdir(pywin32_system32_dir):
-                if dll_file.lower().endswith('.dll'):
-                    base_name = os.path.splitext(dll_file)[0]
-                    # The pywintypes and pythoncom DLLs go to the root of the lib
-                    if base_name.startswith('pywintypes') or base_name.startswith('pythoncom'):
-                        dest_path = os.path.join(lib_dir, base_name + '.pyd')
-                    else:
-                        dest_path = os.path.join(win32_dir, base_name + '.pyd')
-                    
-                    src_path = os.path.join(pywin32_system32_dir, dll_file)
-                    print(f"Copying {src_path} to {dest_path}")
-                    shutil.copy(src_path, dest_path)
+                if not dll_file.lower().endswith('.dll'):
+                    continue
+                
+                src_path = os.path.join(pywin32_system32_dir, dll_file)
+                base_name = os.path.splitext(dll_file)[0]
+                
+                # Handle special modules that go in the lib root with generic names
+                if base_name.lower().startswith('pywintypes'):
+                    dest_path = os.path.join(lib_dir, 'pywintypes.pyd')
+                elif base_name.lower().startswith('pythoncom'):
+                    dest_path = os.path.join(lib_dir, 'pythoncom.pyd')
+                # Other modules go into the win32 directory
+                else:
+                    dest_path = os.path.join(win32_dir, base_name + '.pyd')
+                
+                print(f"Copying {src_path} to {dest_path}")
+                shutil.copy(src_path, dest_path)
         else:
             print(f"Warning: Could not find 'pywin32_system32' or 'win32' directory. Cannot apply pywin32 fix.")
 
