@@ -94,29 +94,24 @@ def create_dxt_package():
     if os.name == 'nt':
         print("Applying pywin32 post-install fix for vendored library...")
         pywin32_system32_dir = os.path.join(lib_dir, "pywin32_system32")
-        if os.path.exists(pywin32_system32_dir):
-            import sys
-            # Determine the short Python version string (e.g., "311" for Python 3.11)
-            py_version_short = f"{sys.version_info.major}{sys.version_info.minor}"
-            
-            dlls_to_copy = {
-                f"pywintypes{py_version_short}.dll": "pywintypes.pyd",
-                f"pythoncom{py_version_short}.dll": "pythoncom.pyd"
-            }
+        win32_dir = os.path.join(lib_dir, "win32")
 
-            found_any = False
-            for dll_name, pyd_name in dlls_to_copy.items():
-                src_path = os.path.join(pywin32_system32_dir, dll_name)
-                dest_path = os.path.join(lib_dir, pyd_name)
-                if os.path.exists(src_path):
+        if os.path.exists(pywin32_system32_dir) and os.path.exists(win32_dir):
+            print(f"Copying DLLs from {pywin32_system32_dir} to {win32_dir}...")
+            for dll_file in os.listdir(pywin32_system32_dir):
+                if dll_file.lower().endswith('.dll'):
+                    base_name = os.path.splitext(dll_file)[0]
+                    # The pywintypes and pythoncom DLLs go to the root of the lib
+                    if base_name.startswith('pywintypes') or base_name.startswith('pythoncom'):
+                        dest_path = os.path.join(lib_dir, base_name + '.pyd')
+                    else:
+                        dest_path = os.path.join(win32_dir, base_name + '.pyd')
+                    
+                    src_path = os.path.join(pywin32_system32_dir, dll_file)
                     print(f"Copying {src_path} to {dest_path}")
                     shutil.copy(src_path, dest_path)
-                    found_any = True
-            
-            if not found_any:
-                 print(f"Warning: Failed to apply pywin32 fix. No DLLs found for Python {sys.version}. The package may fail on Windows.")
         else:
-            print("Warning: pywin32_system32 directory not found. Cannot apply post-install fix.")
+            print(f"Warning: Could not find 'pywin32_system32' or 'win32' directory. Cannot apply pywin32 fix.")
 
     # 5. Create manifest.json
     print("Generating manifest.json...")
