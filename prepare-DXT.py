@@ -81,16 +81,8 @@ def create_dxt_package():
     subprocess.run(install_command, check=True, capture_output=True)
 
     # Determine the site-packages path for the manifest's PYTHONPATH
-    print("Determining site-packages path for manifest...")
-    site_packages_cmd = [
-        venv_python_executable, "-c",
-        "import sysconfig; print(sysconfig.get_path('purelib'))"
-    ]
-    result = subprocess.run(site_packages_cmd, check=True, capture_output=True, text=True)
-    abs_site_packages_path = result.stdout.strip()
-    # Create a cross-platform relative path for the manifest
-    rel_site_packages_path = os.path.relpath(abs_site_packages_path, BUILD_DIR)
-    python_path_in_manifest = os.path.join("${__dirname}", rel_site_packages_path).replace(os.sep, '/')
+    # On Windows, packages are in 'Lib', not 'Lib/site-packages' for this setup.
+    python_path_in_manifest = os.path.join("${__dirname}", "server", "venv", "Lib").replace(os.sep, '/')
     
     # 5. Create manifest.json
     print("Generating manifest.json...")
