@@ -13,7 +13,7 @@ jobs:
     # Use a build matrix to run the job on all three major operating systems
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         python-version: ['3.11']
 
     runs-on: ${{ matrix.os }}
