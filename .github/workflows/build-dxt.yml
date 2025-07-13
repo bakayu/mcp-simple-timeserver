@@ -27,20 +27,21 @@ jobs:
       - name: Install dependencies (for the script itself if needed)
         run: pip install --upgrade pip
 
-      - name: Run packaging script
+      - name: Run Python script to prepare the build directory
         run: python prepare-DXT.py
 
-      - name: Rename artifact for upload
-        shell: bash
+      - name: Install DXT CLI
+        run: npm install -g @anthropic-ai/dxt
+
+      - name: Pack the extension using the official DXT CLI
+        id: pack
         run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-windows.dxt
-          elif [[ "${{ runner.os }}" == "macOS" ]]; then
-            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-macos.dxt
-          fi
+          DXT_FILENAME="mcp-simple-timeserver-${{ runner.os }}.dxt"
+          dxt pack ./dxt_build --output "./${DXT_FILENAME}"
+          echo "dxt_filename=${DXT_FILENAME}" >> $GITHUB_OUTPUT
 
       - name: Upload DXT artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dxt-package-${{ runner.os }}
-          path: ./*.dxt 
+          name: dxt-package-${{ steps.pack.outputs.dxt_filename }}
+          path: ./${{ steps.pack.outputs.dxt_filename }} 

@@ -154,17 +154,11 @@ def create_dxt_package():
     shutil.copy(SOURCE_SERVER_PATH, os.path.join(server_dir, "main.py"))
     shutil.copy(SOURCE_ICON_PATH, os.path.join(BUILD_DIR, "icon.png"))
     
-    # 7. Create the .dxt (ZIP) archive
-    print(f"Creating DXT archive: {output_filename}...")
-    shutil.make_archive(output_filename.replace('.dxt', ''), 'zip', BUILD_DIR)
-    os.rename(output_filename.replace('.dxt', '.zip'), output_filename)
+    # The script no longer creates the archive. It only prepares the directory.
+    # The official DXT CLI will handle the packaging in the CI/CD workflow.
     
-    # 8. Final cleanup
-    print(f"Cleaning up build directory: {BUILD_DIR}...")
-    shutil.rmtree(BUILD_DIR)
-
     print("-" * 30)
-    print(f"[SUCCESS] Successfully created DXT package: {output_filename}")
+    print(f"[SUCCESS] Successfully prepared the build directory: {BUILD_DIR}")
     print("-" * 30)
 
 if __name__ == "__main__":
