@@ -2,6 +2,10 @@ name: Build DXT Packages
 
 # This workflow can be triggered manually from the Actions tab on GitHub
 on:
+  push:
+    branches: [ main, fastmcp2 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -9,7 +13,8 @@ jobs:
     # Use a build matrix to run the job on all three major operating systems
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11']
 
     runs-on: ${{ matrix.os }}
 
@@ -20,37 +25,31 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # This version should match the 'requires-python' in pyproject.toml
-          python-version: '3.11' 
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install dependencies (for the script itself if needed)
-        run: pip install --upgrade pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
 
-      - name: Run Python script to prepare the build directory
+      - name: Prepare DXT package
         run: python prepare-DXT.py
 
       - name: Install DXT CLI
         run: npm install -g @anthropic-ai/dxt
 
-      - name: Pack the extension (Windows)
-        if: runner.os == 'Windows'
-        id: pack-win
-        run: |
-          $env:DXT_FILENAME="mcp-simple-timeserver-Windows.dxt"
-          dxt pack ./dxt_build "$env:DXT_FILENAME"
-          echo "dxt_filename=$env:DXT_FILENAME" >> $env:GITHUB_OUTPUT
-
-      - name: Pack the extension (macOS & Linux)
+      - name: Create DXT package (Unix)
         if: runner.os != 'Windows'
-        id: pack-unix
-        run: |
-          DXT_FILENAME="mcp-simple-timeserver-${{ runner.os }}.dxt"
-          dxt pack ./dxt_build "./${DXT_FILENAME}"
-          echo "dxt_filename=${DXT_FILENAME}" >> $GITHUB_OUTPUT
+        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}.dxt"
 
-      - name: Upload DXT artifact
+      - name: Create DXT package (Windows)
+        if: runner.os == 'Windows'
+        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}.dxt"
+        shell: pwsh
+
+      - name: Upload DXT package
         uses: actions/upload-artifact@v4
         with:
-          name: dxt-package-${{ runner.os }}
-          path: ./${{ steps.pack-win.outputs.dxt_filename || steps.pack-unix.outputs.dxt_filename }} 
+          name: dxt-${{ runner.os }}-${{ matrix.python-version }}
+          path: mcp-simple-timeserver-*.dxt 

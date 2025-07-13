@@ -1,175 +1,109 @@
 #!/usr/bin/env python3
 """
-DXT Packaging Script for MCP Simple Time Server (Venv Bundling Method)
-
-This script automates the process of packaging the stdio version of the
-mcp-simple-timeserver into a .dxt file for distribution. It creates a
-self-contained package by bundling a full Python virtual environment.
+Prepare DXT package directory structure for mcp-simple-timeserver.
+This script creates a directory ready to be packaged by the DXT CLI tool.
 """
 
-import os
-import shutil
 import json
-import zipfile
-import tomllib
+import os
+import platform
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
-# --- Configuration ---
-BUILD_DIR = "dxt_build"
-PYPROJECT_PATH = "pyproject.toml"
-SOURCE_SERVER_PATH = os.path.join("mcp_simple_timeserver", "server.py")
-SOURCE_ICON_PATH = "icon.png"
-# ---
-
-def create_dxt_package():
-    """
-    Reads configuration, builds a full virtual environment, assembles the
-    DXT structure, and zips it into the final .dxt file.
-    """
-    print("Starting DXT packaging process with venv bundling...")
-
-    # 1. Read metadata from pyproject.toml
-    print(f"Reading metadata from {PYPROJECT_PATH}...")
-    try:
-        with open(PYPROJECT_PATH, "rb") as f:
-            pyproject_data = tomllib.load(f)
-        
-        project_meta = pyproject_data["project"]
-        project_name = project_meta["name"]
-        project_version = project_meta["version"]
-        project_description = project_meta["description"]
-        # Get the full author object and add the URL
-        project_author = project_meta["authors"][0]
-        project_author['url'] = "https://mcp.andybrandt.net/"
-        dependencies = project_meta.get("dependencies", [])
-        homepage_url = project_meta.get("urls", {}).get("Homepage", "")
-        # Parse license from classifiers, default to MIT
-        license_str = "MIT"
-        for classifier in project_meta.get("classifiers", []):
-            if "License :: OSI Approved" in classifier:
-                license_str = classifier.split("::")[-1].strip().replace(" License", "")
-        python_version_req = project_meta.get("requires-python", ">=3.11")
-
-    except (FileNotFoundError, KeyError) as e:
-        print(f"Error: Could not read {PYPROJECT_PATH} or it is malformed. {e}")
-        return
-
-    output_filename = f"{project_name}.dxt"
-
-    # 2. Clean up previous builds
-    print("Cleaning up previous build artifacts...")
-    if os.path.exists(BUILD_DIR):
-        shutil.rmtree(BUILD_DIR)
-    if os.path.exists(output_filename):
-        os.remove(output_filename)
-
-    # 3. Set up build directories
-    print(f"Creating build directory: {BUILD_DIR}")
-    server_dir = os.path.join(BUILD_DIR, "server")
-    os.makedirs(server_dir)
-    venv_dir = os.path.join(server_dir, "venv")
-
-    # 4. Create and populate the virtual environment
-    print(f"Creating virtual environment in '{venv_dir}'...")
-    subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True, capture_output=True)
-
-    venv_python_executable = os.path.join(venv_dir, "Scripts" if os.name == 'nt' else "bin", "python")
+def prepare_dxt_package():
+    """Prepare the DXT package directory structure."""
+    # Determine paths
+    root_dir = Path(__file__).parent
+    build_dir = root_dir / "dxt_build"
+    server_dir = build_dir / "server"
+    venv_dir = server_dir / "venv"
     
-    print(f"Installing dependencies into venv using '{venv_python_executable}'...")
-    install_command = [venv_python_executable, "-m", "pip", "install"] + dependencies
-    subprocess.run(install_command, check=True, capture_output=True)
-
-    # Make the venv relocatable by removing the absolute 'home' path from pyvenv.cfg
-    print("Making the virtual environment relocatable...")
-    pyvenv_cfg_path = os.path.join(venv_dir, "pyvenv.cfg")
-    with open(pyvenv_cfg_path, 'r') as f:
-        lines = f.readlines()
-    with open(pyvenv_cfg_path, 'w') as f:
-        for line in lines:
-            if not line.strip().startswith('home ='):
-                f.write(line)
-
-    # Determine the site-packages path for the manifest's PYTHONPATH
-    # On Windows, packages are in 'Lib', not 'Lib/site-packages' for this setup.
-    # CRITICAL: All paths in the manifest MUST use forward slashes.
-    if os.name == 'nt':
-        python_path_in_manifest = "${__dirname}/server/venv/Lib"
-        mcp_command_path = "${__dirname}/server/venv/Scripts/python"
+    # Clean previous build
+    if build_dir.exists():
+        print(f"Cleaning previous build directory: {build_dir}")
+        shutil.rmtree(build_dir)
+    
+    # Create directory structure
+    print("Creating DXT directory structure...")
+    server_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Copy server files
+    print("Copying server files...")
+    shutil.copytree(
+        root_dir / "mcp_simple_timeserver",
+        server_dir / "mcp_simple_timeserver",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo")
+    )
+    
+    # Copy launcher scripts
+    print("Copying launcher scripts...")
+    shutil.copy2(root_dir / "launcher.bat", build_dir / "launcher.bat")
+    shutil.copy2(root_dir / "launcher.sh", build_dir / "launcher.sh")
+    
+    # Make launcher.sh executable
+    launcher_sh = build_dir / "launcher.sh"
+    launcher_sh.chmod(launcher_sh.stat().st_mode | 0o755)
+    
+    # Create virtual environment
+    print(f"Creating virtual environment in {venv_dir}...")
+    subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+    
+    # Install dependencies
+    print("Installing dependencies...")
+    if platform.system() == "Windows":
+        pip_path = venv_dir / "Scripts" / "pip.exe"
     else:
-        # For macOS and Linux, it's typically '.../lib/pythonX.Y/site-packages'
-        site_packages_cmd = [
-            venv_python_executable, "-c",
-            "import sysconfig; print(sysconfig.get_path('purelib'))"
-        ]
-        result = subprocess.run(site_packages_cmd, check=True, capture_output=True, text=True)
-        abs_site_packages_path = result.stdout.strip()
-        rel_site_packages_path = os.path.relpath(abs_site_packages_path, BUILD_DIR)
-        python_path_in_manifest = os.path.join("${__dirname}", rel_site_packages_path).replace(os.sep, '/')
-        mcp_command_path = "${__dirname}/server/venv/bin/python"
-
-    # 5. Create manifest.json
-    print("Generating manifest.json...")
-    manifest_data = {
-        "dxt_version": "1.0",
-        "name": "MCP Simple Time Server",
-        "version": project_version,
-        "author": project_author,
-        "description": project_description,
-        "repository": {
-            "type": "git",
-            "url": homepage_url
-        },
-        "homepage": homepage_url,
-        "documentation": homepage_url,
-        "support": f"{homepage_url}/issues" if homepage_url else "",
-        "license": license_str,
-        "keywords": ["time", "ntp", "mcp", "server", "utility"],
-        "compatibility": {
-            "claude_desktop": ">=0.10.0",
-            "platforms": ["darwin", "win32", "linux"],
-            "runtimes": {
-                "python": python_version_req
-            }
-        },
-        "server": {
-            "type": "python",
-            "entry_point": "server/main.py",
-            "mcp_config": {
-                "command": mcp_command_path,
-                "args": ["-u", "${__dirname}/server/main.py"],
-                "env": {
-                    "PYTHONPATH": python_path_in_manifest
-                }
-            }
-        },
-        "tools": [
-            {
-                "name": "get_local_time",
-                "description": "Returns the current local time and timezone information from the local machine."
-            },
-            {
-                "name": "get_utc",
-                "description": "Returns accurate UTC time from an NTP server."
-            }
-        ],
-        "icon": "icon.png"
+        pip_path = venv_dir / "bin" / "pip"
+    
+    subprocess.run([
+        str(pip_path), "install", "--no-cache-dir",
+        "fastmcp>=0.1.0", "ntplib>=0.4.0"
+    ], check=True)
+    
+    # Remove home line from pyvenv.cfg to make it relocatable
+    pyvenv_cfg = venv_dir / "pyvenv.cfg"
+    if pyvenv_cfg.exists():
+        print("Making virtual environment relocatable...")
+        lines = pyvenv_cfg.read_text().splitlines()
+        # Keep all lines except the home line - let launcher set it
+        filtered_lines = [line for line in lines if not line.startswith("home = ")]
+        # Add a placeholder that the launcher will replace
+        filtered_lines.insert(0, "home = WILL_BE_SET_BY_LAUNCHER")
+        pyvenv_cfg.write_text("\n".join(filtered_lines) + "\n")
+    
+    # Determine platform-specific command
+    system = platform.system()
+    if system == "Windows":
+        command = "launcher.bat"
+    else:
+        command = "./launcher.sh"
+    
+    # Create manifest
+    manifest = {
+        "name": "mcp-simple-timeserver",
+        "description": "A simple MCP server that provides time utilities including local time, UTC time from NTP servers, and timezone information",
+        "author": "Andy Brandt",
+        "version": "1.1.2",
+        "command": command,
+        "env": {
+            "PYTHONPATH": "server"
+        }
     }
-    manifest_path = os.path.join(BUILD_DIR, "manifest.json")
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest_data, f, indent=2)
-
-    # 6. Copy server code and icon
-    print("Copying server code and icon...")
-    shutil.copy(SOURCE_SERVER_PATH, os.path.join(server_dir, "main.py"))
-    shutil.copy(SOURCE_ICON_PATH, os.path.join(BUILD_DIR, "icon.png"))
     
-    # The script no longer creates the archive. It only prepares the directory.
-    # The official DXT CLI will handle the packaging in the CI/CD workflow.
+    manifest_path = build_dir / "manifest.json"
+    print(f"Creating manifest.json for {system}...")
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2)
     
-    print("-" * 30)
-    print(f"[SUCCESS] Successfully prepared the build directory: {BUILD_DIR}")
-    print("-" * 30)
+    print(f"\nDXT package prepared in: {build_dir}")
+    print(f"Platform: {system}")
+    print(f"Command: {command}")
+    print("\nTo create the DXT package, run:")
+    print(f"  npx @anthropic-ai/dxt pack ./dxt_build mcp-simple-timeserver-{system.lower()}.dxt")
+    
+    return build_dir
 
 if __name__ == "__main__":
-    create_dxt_package() 
+    prepare_dxt_package() 
