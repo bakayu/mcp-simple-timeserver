@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-DXT Packaging Script for MCP Simple Time Server
+DXT Packaging Script for MCP Simple Time Server (Venv Bundling Method)
 
 This script automates the process of packaging the stdio version of the
-mcp-simple-timeserver into a .dxt file for distribution.
-It reads metadata from pyproject.toml and assembles the package according
-to the DXT specification.
+mcp-simple-timeserver into a .dxt file for distribution. It creates a
+self-contained package by bundling a full Python virtual environment.
 """
 
 import os
 import shutil
 import json
 import zipfile
-import tomllib  # For Python 3.11+
+import tomllib
 import subprocess
+import sys
 
 # --- Configuration ---
 BUILD_DIR = "dxt_build"
@@ -24,10 +24,10 @@ SOURCE_ICON_PATH = "icon.png"
 
 def create_dxt_package():
     """
-    Reads configuration, builds the DXT structure in a temporary directory,
-    and then zips it into the final .dxt file.
+    Reads configuration, builds a full virtual environment, assembles the
+    DXT structure, and zips it into the final .dxt file.
     """
-    print("Starting DXT packaging process...")
+    print("Starting DXT packaging process with venv bundling...")
 
     # 1. Read metadata from pyproject.toml
     print(f"Reading metadata from {PYPROJECT_PATH}...")
@@ -42,9 +42,7 @@ def create_dxt_package():
         # Get the full author object and add the URL
         project_author = project_meta["authors"][0]
         project_author['url'] = "https://mcp.andybrandt.net/"
-        dependencies = project_meta["dependencies"]
-
-        # --- Extract additional metadata ---
+        dependencies = project_meta.get("dependencies", [])
         homepage_url = project_meta.get("urls", {}).get("Homepage", "")
         # Parse license from classifiers, default to MIT
         license_str = "MIT"
@@ -52,8 +50,7 @@ def create_dxt_package():
             if "License :: OSI Approved" in classifier:
                 license_str = classifier.split("::")[-1].strip().replace(" License", "")
         python_version_req = project_meta.get("requires-python", ">=3.11")
-        # ---
-        
+
     except (FileNotFoundError, KeyError) as e:
         print(f"Error: Could not read {PYPROJECT_PATH} or it is malformed. {e}")
         return
@@ -71,56 +68,34 @@ def create_dxt_package():
     print(f"Creating build directory: {BUILD_DIR}")
     server_dir = os.path.join(BUILD_DIR, "server")
     os.makedirs(server_dir)
+    venv_dir = os.path.join(server_dir, "venv")
 
-    # 4. Install dependencies into a 'lib' directory
-    print("Installing dependencies into the 'lib' directory...")
-    lib_dir = os.path.join(BUILD_DIR, "lib")
-    os.makedirs(lib_dir)
-    try:
-        # Use pip to install dependencies into the target lib directory
-        install_args = ["pip", "install"] + dependencies + ["--target", lib_dir]
-        result = subprocess.run(install_args, check=True, capture_output=True, text=True)
-        print(result.stdout)
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print("Error: Failed to install dependencies using pip.")
-        if isinstance(e, subprocess.CalledProcessError):
-            print(f"pip stdout: {e.stdout}")
-            print(f"pip stderr: {e.stderr}")
-        else:
-            print("Could not find 'pip'. Is it installed and in your PATH?")
-        return
+    # 4. Create and populate the virtual environment
+    print(f"Creating virtual environment in '{venv_dir}'...")
+    subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True, capture_output=True)
 
-    # Post-install fix for pywin32 on Windows
-    if os.name == 'nt':
-        print("Applying pywin32 post-install fix for vendored library...")
-        pywin32_system32_dir = os.path.join(lib_dir, "pywin32_system32")
-        win32_dir = os.path.join(lib_dir, "win32")
+    venv_python_executable = os.path.join(venv_dir, "Scripts" if os.name == 'nt' else "bin", "python")
+    
+    print(f"Installing dependencies into venv using '{venv_python_executable}'...")
+    install_command = [venv_python_executable, "-m", "pip", "install"] + dependencies
+    subprocess.run(install_command, check=True, capture_output=True)
 
-        if os.path.exists(pywin32_system32_dir) and os.path.exists(win32_dir):
-            print(f"Copying DLLs from {pywin32_system32_dir}...")
-            for dll_file in os.listdir(pywin32_system32_dir):
-                if not dll_file.lower().endswith('.dll'):
-                    continue
-                
-                src_path = os.path.join(pywin32_system32_dir, dll_file)
-                base_name = os.path.splitext(dll_file)[0]
-                
-                # Handle special modules that go in the lib root with generic names
-                if base_name.lower().startswith('pywintypes'):
-                    dest_path = os.path.join(lib_dir, 'pywintypes.pyd')
-                elif base_name.lower().startswith('pythoncom'):
-                    dest_path = os.path.join(lib_dir, 'pythoncom.pyd')
-                # Other modules go into the win32 directory
-                else:
-                    dest_path = os.path.join(win32_dir, base_name + '.pyd')
-                
-                print(f"Copying {src_path} to {dest_path}")
-                shutil.copy(src_path, dest_path)
-        else:
-            print(f"Warning: Could not find 'pywin32_system32' or 'win32' directory. Cannot apply pywin32 fix.")
-
+    # Determine the site-packages path for the manifest's PYTHONPATH
+    print("Determining site-packages path for manifest...")
+    site_packages_cmd = [
+        venv_python_executable, "-c",
+        "import sysconfig; print(sysconfig.get_path('purelib'))"
+    ]
+    result = subprocess.run(site_packages_cmd, check=True, capture_output=True, text=True)
+    abs_site_packages_path = result.stdout.strip()
+    # Create a cross-platform relative path for the manifest
+    rel_site_packages_path = os.path.relpath(abs_site_packages_path, BUILD_DIR)
+    python_path_in_manifest = os.path.join("${__dirname}", rel_site_packages_path).replace(os.sep, '/')
+    
     # 5. Create manifest.json
     print("Generating manifest.json...")
+    mcp_command_path = os.path.join("${__dirname}", "server", "venv", "Scripts" if os.name == 'nt' else "bin", "python")
+    
     manifest_data = {
         "dxt_version": "1.0",
         "name": "MCP Simple Time Server",
@@ -147,10 +122,10 @@ def create_dxt_package():
             "type": "python",
             "entry_point": "server/main.py",
             "mcp_config": {
-                "command": "python",
-                "args": ["-u", "${__dirname}/server/main.py"],
+                "command": mcp_command_path,
+                "args": ["-u", os.path.join("${__dirname}", "server", "main.py")],
                 "env": {
-                    "PYTHONPATH": "${__dirname}/lib"
+                    "PYTHONPATH": python_path_in_manifest
                 }
             }
         },
@@ -167,38 +142,26 @@ def create_dxt_package():
         "icon": "icon.png"
     }
     manifest_path = os.path.join(BUILD_DIR, "manifest.json")
-    with open(manifest_path, "w") as f:
+    with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
 
-    # 6. Copy server code
-    print(f"Copying server code to {server_dir}...")
-    dest_server_path = os.path.join(server_dir, "main.py")
-    shutil.copy(SOURCE_SERVER_PATH, dest_server_path)
-
-    # 7. Copy icon
-    print("Copying icon...")
-    if os.path.exists(SOURCE_ICON_PATH):
-        shutil.copy(SOURCE_ICON_PATH, os.path.join(BUILD_DIR, "icon.png"))
-    else:
-        print(f"Warning: Icon file not found at '{SOURCE_ICON_PATH}'. The package will be created without an icon.")
-
-    # 8. Create the .dxt (ZIP) archive
-    print(f"Creating DXT archive: {output_filename}...")
-    with zipfile.ZipFile(output_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, files in os.walk(BUILD_DIR):
-            for file in files:
-                file_path = os.path.join(root, file)
-                archive_path = os.path.relpath(file_path, BUILD_DIR)
-                zipf.write(file_path, archive_path)
+    # 6. Copy server code and icon
+    print("Copying server code and icon...")
+    shutil.copy(SOURCE_SERVER_PATH, os.path.join(server_dir, "main.py"))
+    shutil.copy(SOURCE_ICON_PATH, os.path.join(BUILD_DIR, "icon.png"))
     
-    # 9. Final cleanup
+    # 7. Create the .dxt (ZIP) archive
+    print(f"Creating DXT archive: {output_filename}...")
+    shutil.make_archive(output_filename.replace('.dxt', ''), 'zip', BUILD_DIR)
+    os.rename(output_filename.replace('.dxt', '.zip'), output_filename)
+    
+    # 8. Final cleanup
     print(f"Cleaning up build directory: {BUILD_DIR}...")
     shutil.rmtree(BUILD_DIR)
 
     print("-" * 30)
-    print(f"Successfully created DXT package: {output_filename}")
+    print(f"[SUCCESS] Successfully created DXT package: {output_filename}")
     print("-" * 30)
-
 
 if __name__ == "__main__":
     create_dxt_package() 
