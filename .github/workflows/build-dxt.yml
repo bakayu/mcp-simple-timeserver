@@ -9,7 +9,7 @@ jobs:
     # Use a build matrix to run the job on all three major operating systems
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -37,8 +37,6 @@ jobs:
             mv mcp-simple-timeserver.dxt mcp-simple-timeserver-windows.dxt
           elif [[ "${{ runner.os }}" == "macOS" ]]; then
             mv mcp-simple-timeserver.dxt mcp-simple-timeserver-macos.dxt
-#          else
-#            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-linux.dxt
           fi
 
       - name: Upload DXT artifact
