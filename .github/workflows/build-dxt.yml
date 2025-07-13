@@ -37,8 +37,8 @@ jobs:
             mv mcp-simple-timeserver.dxt mcp-simple-timeserver-windows.dxt
           elif [[ "${{ runner.os }}" == "macOS" ]]; then
             mv mcp-simple-timeserver.dxt mcp-simple-timeserver-macos.dxt
-          else
-            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-linux.dxt
+#          else
+#            mv mcp-simple-timeserver.dxt mcp-simple-timeserver-linux.dxt
           fi
 
       - name: Upload DXT artifact
