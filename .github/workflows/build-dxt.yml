@@ -33,8 +33,17 @@ jobs:
       - name: Install DXT CLI
         run: npm install -g @anthropic-ai/dxt
 
-      - name: Pack the extension using the official DXT CLI
-        id: pack
+      - name: Pack the extension (Windows)
+        if: runner.os == 'Windows'
+        id: pack-win
+        run: |
+          $env:DXT_FILENAME="mcp-simple-timeserver-Windows.dxt"
+          dxt pack ./dxt_build "$env:DXT_FILENAME"
+          echo "dxt_filename=$env:DXT_FILENAME" >> $env:GITHUB_OUTPUT
+
+      - name: Pack the extension (macOS & Linux)
+        if: runner.os != 'Windows'
+        id: pack-unix
         run: |
           DXT_FILENAME="mcp-simple-timeserver-${{ runner.os }}.dxt"
           dxt pack ./dxt_build "./${DXT_FILENAME}"
@@ -43,5 +52,5 @@ jobs:
       - name: Upload DXT artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dxt-package-${{ steps.pack.outputs.dxt_filename }}
-          path: ./${{ steps.pack.outputs.dxt_filename }} 
+          name: dxt-package-${{ runner.os }}
+          path: ./${{ steps.pack-win.outputs.dxt_filename || steps.pack-unix.outputs.dxt_filename }} 
