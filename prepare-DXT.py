@@ -80,6 +80,16 @@ def create_dxt_package():
     install_command = [venv_python_executable, "-m", "pip", "install"] + dependencies
     subprocess.run(install_command, check=True, capture_output=True)
 
+    # Make the venv relocatable by removing the absolute 'home' path from pyvenv.cfg
+    print("Making the virtual environment relocatable...")
+    pyvenv_cfg_path = os.path.join(venv_dir, "pyvenv.cfg")
+    with open(pyvenv_cfg_path, 'r') as f:
+        lines = f.readlines()
+    with open(pyvenv_cfg_path, 'w') as f:
+        for line in lines:
+            if not line.strip().startswith('home ='):
+                f.write(line)
+
     # Determine the site-packages path for the manifest's PYTHONPATH
     # On Windows, packages are in 'Lib', not 'Lib/site-packages' for this setup.
     # CRITICAL: All paths in the manifest MUST use forward slashes.
