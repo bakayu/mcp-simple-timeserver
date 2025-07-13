@@ -30,7 +30,8 @@ def to_display_name(name: str) -> str:
 def prepare_dxt_package():
     """Prepare the DXT package directory structure."""
     # Determine paths
-    root_dir = Path(__file__).parent
+    script_dir = Path(__file__).parent
+    root_dir = script_dir.parent
     build_dir = root_dir / "dxt_build"
     server_dir = build_dir / "server"
     venv_dir = server_dir / "venv"
@@ -82,11 +83,11 @@ def prepare_dxt_package():
     
     # Copy launcher scripts
     print("Copying launcher scripts...")
-    shutil.copy2(root_dir / "launcher.bat", build_dir / "launcher.bat")
-    shutil.copy2(root_dir / "launcher.sh", build_dir / "launcher.sh")
+    shutil.copy2(script_dir / "launcher.bat", build_dir / "launcher.bat")
+    shutil.copy2(script_dir / "launcher.sh", build_dir / "launcher.sh")
     
     # Copy icon if it exists
-    icon_path = root_dir / "icon.png"
+    icon_path = script_dir / "icon.png"
     if icon_path.exists():
         shutil.copy2(icon_path, build_dir / "icon.png")
     

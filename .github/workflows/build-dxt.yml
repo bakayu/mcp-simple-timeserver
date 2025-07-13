@@ -34,7 +34,7 @@ jobs:
           pip install build
 
       - name: Prepare DXT package
-        run: python prepare-DXT.py
+        run: python dxt/prepare-DXT.py
 
       - name: Install DXT CLI
         run: npm install -g @anthropic-ai/dxt
