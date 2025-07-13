@@ -9,7 +9,7 @@ if [ -f "server/venv/.configured" ]; then
     exec server/venv/bin/python -m mcp_simple_timeserver
 fi
 
-echo "Configuring MCP Simple Time Server for first run..."
+echo "Configuring MCP Simple Time Server for first run..." >&2
 
 # Find Python - try python3 first, then python
 PYTHON_EXE=$(command -v python3 || command -v python)
@@ -23,11 +23,11 @@ fi
 # Get the directory containing Python
 PYTHON_HOME=$(dirname "$PYTHON_EXE")
 
-echo "Found Python at: $PYTHON_HOME"
+echo "Found Python at: $PYTHON_HOME" >&2
 
 # Check Python version
 PYTHON_VERSION=$("$PYTHON_EXE" --version 2>&1 | cut -d' ' -f2)
-echo "Python version: $PYTHON_VERSION"
+echo "Python version: $PYTHON_VERSION" >&2
 
 # Check if it's at least 3.11
 MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
@@ -56,7 +56,7 @@ rm -f "${CONFIG_FILE}.bak"
 # Create marker file
 echo "Configured on $(date)" > "server/venv/.configured"
 
-echo "Configuration complete. Starting server..."
+echo "Configuration complete. Starting server..." >&2
 
 # Run the server
 exec server/venv/bin/python -m mcp_simple_timeserver 

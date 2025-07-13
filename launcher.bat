@@ -11,7 +11,7 @@ if exist "server\venv\.configured" (
     exit /b !errorlevel!
 )
 
-echo Configuring MCP Simple Time Server for first run...
+echo Configuring MCP Simple Time Server for first run... >&2
 
 rem Find Python - get only the first result
 set PYTHON_EXE=
@@ -30,11 +30,11 @@ for %%i in ("%PYTHON_EXE%") do set PYTHON_HOME=%%~dpi
 rem Remove trailing backslash
 set PYTHON_HOME=!PYTHON_HOME:~0,-1!
 
-echo Found Python at: !PYTHON_HOME!
+echo Found Python at: !PYTHON_HOME! >&2
 
 rem Check Python version
 for /f "tokens=2" %%i in ('"%PYTHON_EXE%" --version 2^>^&1') do set PYTHON_VERSION=%%i
-echo Python version: !PYTHON_VERSION!
+echo Python version: !PYTHON_VERSION! >&2
 
 rem Update pyvenv.cfg
 set TEMP_FILE=server\venv\pyvenv.cfg.tmp
@@ -62,7 +62,7 @@ move /y "!TEMP_FILE!" "!CONFIG_FILE!" >nul
 rem Create marker file
 echo Configured on %date% %time% > "server\venv\.configured"
 
-echo Configuration complete. Starting server...
+echo Configuration complete. Starting server... >&2
 
 rem Run the server
 "server\venv\Scripts\python.exe" -m mcp_simple_timeserver
