@@ -13,6 +13,20 @@ import sys
 from pathlib import Path
 import tomllib
 
+def to_display_name(name: str) -> str:
+    """Converts a slug-like name to a display name.
+    
+    Example: "mcp-simple-timeserver" -> "MCP Simple Timeserver"
+    """
+    parts = name.split('-')
+    transformed_parts = []
+    for part in parts:
+        if part.lower() == 'mcp':
+            transformed_parts.append('MCP')
+        else:
+            transformed_parts.append(part.capitalize())
+    return ' '.join(transformed_parts)
+
 def prepare_dxt_package():
     """Prepare the DXT package directory structure."""
     # Determine paths
@@ -46,6 +60,9 @@ def prepare_dxt_package():
         print(f"Error: Could not read {pyproject_path} or it is malformed. {e}")
         sys.exit(1)
     
+    # Generate display name
+    display_name = to_display_name(project_name)
+
     # Clean previous build
     if build_dir.exists():
         print(f"Cleaning previous build directory: {build_dir}")
@@ -107,16 +124,19 @@ def prepare_dxt_package():
     # Determine platform-specific command
     system = platform.system()
     if system == "Windows":
-        command = "launcher.bat"
         entry_point = "launcher.bat"
+        mcp_command = "cmd.exe"
+        mcp_args = ["/c", "${__dirname}\\launcher.bat"]
     else:
-        command = "./launcher.sh"
         entry_point = "launcher.sh"
+        mcp_command = "${__dirname}/launcher.sh"
+        mcp_args = []
     
     # Create manifest with all required DXT fields
     manifest = {
         "dxt_version": "0.1",
         "name": project_name,
+        "display_name": display_name,
         "version": project_version,
         "description": project_description,
         "author": {
@@ -135,7 +155,8 @@ def prepare_dxt_package():
             "type": "binary",
             "entry_point": entry_point,
             "mcp_config": {
-                "command": command,
+                "command": mcp_command,
+                "args": mcp_args,
                 "env": {
                     "PYTHONPATH": "${__dirname}/server"
                 }
@@ -171,7 +192,7 @@ def prepare_dxt_package():
     
     print(f"\nDXT package prepared in: {build_dir}")
     print(f"Platform: {system}")
-    print(f"Command: {command}")
+    print(f"Command: {mcp_command} {' '.join(mcp_args)}")
     print("\nTo create the DXT package, run:")
     print(f"  npx @anthropic-ai/dxt pack ./dxt_build mcp-simple-timeserver-{system.lower()}.dxt")
     
