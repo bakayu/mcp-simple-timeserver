@@ -82,12 +82,24 @@ def create_dxt_package():
 
     # Determine the site-packages path for the manifest's PYTHONPATH
     # On Windows, packages are in 'Lib', not 'Lib/site-packages' for this setup.
-    python_path_in_manifest = os.path.join("${__dirname}", "server", "venv", "Lib").replace(os.sep, '/')
-    
+    # CRITICAL: All paths in the manifest MUST use forward slashes.
+    if os.name == 'nt':
+        python_path_in_manifest = "${__dirname}/server/venv/Lib"
+        mcp_command_path = "${__dirname}/server/venv/Scripts/python"
+    else:
+        # For macOS and Linux, it's typically '.../lib/pythonX.Y/site-packages'
+        site_packages_cmd = [
+            venv_python_executable, "-c",
+            "import sysconfig; print(sysconfig.get_path('purelib'))"
+        ]
+        result = subprocess.run(site_packages_cmd, check=True, capture_output=True, text=True)
+        abs_site_packages_path = result.stdout.strip()
+        rel_site_packages_path = os.path.relpath(abs_site_packages_path, BUILD_DIR)
+        python_path_in_manifest = os.path.join("${__dirname}", rel_site_packages_path).replace(os.sep, '/')
+        mcp_command_path = "${__dirname}/server/venv/bin/python"
+
     # 5. Create manifest.json
     print("Generating manifest.json...")
-    mcp_command_path = os.path.join("${__dirname}", "server", "venv", "Scripts" if os.name == 'nt' else "bin", "python")
-    
     manifest_data = {
         "dxt_version": "1.0",
         "name": "MCP Simple Time Server",
@@ -115,7 +127,7 @@ def create_dxt_package():
             "entry_point": "server/main.py",
             "mcp_config": {
                 "command": mcp_command_path,
-                "args": ["-u", os.path.join("${__dirname}", "server", "main.py")],
+                "args": ["-u", "${__dirname}/server/main.py"],
                 "env": {
                     "PYTHONPATH": python_path_in_manifest
                 }
