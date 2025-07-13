@@ -37,7 +37,7 @@ jobs:
         id: pack
         run: |
           DXT_FILENAME="mcp-simple-timeserver-${{ runner.os }}.dxt"
-          dxt pack ./dxt_build --output "./${DXT_FILENAME}"
+          dxt pack ./dxt_build "./${DXT_FILENAME}"
           echo "dxt_filename=${DXT_FILENAME}" >> $GITHUB_OUTPUT
 
       - name: Upload DXT artifact
