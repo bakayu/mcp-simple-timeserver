@@ -3,9 +3,12 @@
 # Get the directory where this script is located and cd into it
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Define the path to the venv's python executable
+VENV_PYTHON="server/venv/bin/python"
+
 # If the venv is already configured, just exec the server.
 if [ -f "server/venv/.configured" ]; then
-    exec server/venv/bin/python -m mcp_simple_timeserver
+    exec /bin/bash -c "$VENV_PYTHON -m mcp_simple_timeserver"
 fi
 
 # --- First-Time Setup Logic ---
