@@ -130,8 +130,8 @@ def prepare_dxt_package():
         mcp_args = ["/c", "${__dirname}\\launcher.bat"]
     else:
         entry_point = "launcher.sh"
-        mcp_command = "${__dirname}/launcher.sh"
-        mcp_args = []
+        mcp_command = "/bin/bash"
+        mcp_args = ["${__dirname}/launcher.sh"]
     
     # Create manifest with all required DXT fields
     manifest = {
