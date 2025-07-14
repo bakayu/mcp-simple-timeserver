@@ -197,6 +197,9 @@ def prepare_dxt_package():
     print("\nTo create the DXT package, run:")
     print(f"  npx @anthropic-ai/dxt pack ./dxt_build mcp-simple-timeserver-{system.lower()}.dxt")
     
+    # Write version to a file for the CI workflow to use
+    (build_dir / "version.txt").write_text(project_version)
+
     return build_dir
 
 if __name__ == "__main__":

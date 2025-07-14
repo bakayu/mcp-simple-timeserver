@@ -36,20 +36,25 @@ jobs:
       - name: Prepare DXT package
         run: python dxt/prepare-DXT.py
 
+      - name: Read package version
+        id: package_version
+        run: echo "version=$(cat dxt_build/version.txt)" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Install DXT CLI
         run: npm install -g @anthropic-ai/dxt
 
       - name: Create DXT package (Unix)
         if: runner.os != 'Windows'
-        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}.dxt"
+        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}-${{ steps.package_version.outputs.version }}.dxt"
 
       - name: Create DXT package (Windows)
         if: runner.os == 'Windows'
-        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}.dxt"
+        run: dxt pack ./dxt_build "mcp-simple-timeserver-${{ runner.os }}-${{ steps.package_version.outputs.version }}.dxt"
         shell: pwsh
 
       - name: Upload DXT package
         uses: actions/upload-artifact@v4
         with:
-          name: dxt-${{ runner.os }}-${{ matrix.python-version }}
+          name: mcp-simple-timeserver-${{ runner.os }}-${{ steps.package_version.outputs.version }}
           path: mcp-simple-timeserver-*.dxt 
