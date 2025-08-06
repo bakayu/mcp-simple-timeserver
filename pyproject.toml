@@ -5,22 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mcp-simple-timeserver"
 version = "1.1.2"
-authors = [
-  { name="Andy Brandt", email="andy@codesprinters.com" },
-]
+authors = [{ name = "Andy Brandt", email = "andy@codesprinters.com" }]
 description = "A simple MCP server that provides current time - either local or from an NTP server."
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
-dependencies = [
-    "fastmcp",
-    "ntplib",
-    "pywin32; sys_platform == 'win32'"
-]
+dependencies = ["mcp[ws]", "ntplib", "pywin32; sys_platform == 'win32'"]
 
 [tool.setuptools.packages.find]
 exclude = ["mcp_simple_timeserver.web*"]
