@@ -14,23 +14,16 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = [
-    "mcp[ws]",
-    "ntplib",
-    "pywin32; sys_platform == 'win32'",
-]
+dependencies = ["mcp[ws]", "ntplib", "pywin32; sys_platform == 'win32'", "tmcp"]
 
 [tool.setuptools.packages.find]
 exclude = ["mcp_simple_timeserver.web*"]
 
 [tool.uv.sources]
-mcp = { git = "https://github.com/openwallet-foundation-labs/mcp-over-tsp-python" }
+tmcp = { workspace = true }
 
 [project.urls]
 "Homepage" = "https://github.com/andybrandt/mcp-simple-timeserver"
 
 [project.scripts]
 mcp-simple-timeserver = "mcp_simple_timeserver:main"
-
-[project.optional-dependencies]
-cli = ["fastmcp[cli]"]
