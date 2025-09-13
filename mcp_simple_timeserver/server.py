@@ -2,12 +2,17 @@ from datetime import UTC, datetime
 
 import ntplib
 
-from mcp.server.fastmcp import TMCP
+from mcp.server.fastmcp import FastMCP
+from tmcp import TmcpManager
 
 # Default NTP server
 DEFAULT_NTP_SERVER = "pool.ntp.org"
 
-app = TMCP("mcp-simple-timeserver")
+app = FastMCP(
+    "mcp-simple-timeserver",
+    port=8001,
+    transport_manager=TmcpManager(transport="http://localhost:8001/mcp"),
+)
 
 # Note: in this context the docstring are meant for the client AI to understand the tools and their purpose.
 
@@ -43,4 +48,4 @@ def get_utc(server: str = DEFAULT_NTP_SERVER) -> str:
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(transport="streamable-http")
